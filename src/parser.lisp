@@ -1,6 +1,7 @@
 (defpackage shot.parser
   (:use :cl
-        :snaky))
+        :snaky)
+  (:export :parse))
 (in-package :shot.parser)
 
 (defrule statements
@@ -109,7 +110,7 @@
 
 (defrule (operator-8 mode)
     (or (@ (and (ret :apply-expression)
-                "-" ws
+                (cap "-") ws
                 (applies mode)))
         (applies mode)))
 
