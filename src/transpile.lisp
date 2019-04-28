@@ -3,15 +3,20 @@
         :trivia)
   (:import-from :shot.condition
                 :failed)
-  (:export :statements
+  (:export :*symbol-table*
+           :*bindings*
+           :statements
            :statement
            :expression))
 (in-package :shot.transpile)
 
-(defvar *symbol-table* (make-hash-table :test 'equal))
+(defvar *symbol-table*)
+(defvar *bindings*)
 
 (defun statements (ast)
-  `(progn
+  `(progv
+       (mapcar #'%identifier (mapcar #'car *bindings*))
+       (mapcar #'cdr *bindings*)
      ,@(mapcar #'statement ast)))
 
 (defun statement (ast)
@@ -29,8 +34,10 @@
      (constant-definition pattern expression))))
 
 (defun function-definition (identifier block)
-  `(defun ,(%identifier identifier) (&rest args)
-     ,(%block 'args block)))
+  `(let ((value (lambda (&rest args)
+                  ,(%block 'args block))))
+     (defparameter ,(%identifier identifier) value)
+     (push (cons ',identifier value) *bindings*)))
 
 (defun pattern-variables (pattern)
   (ematch pattern
@@ -43,7 +50,7 @@
     ((list :variable-expression "_")
      '())
     ((list :variable-expression identifier)
-     (list (%identifier identifier)))
+     (list identifier))
     ((list :list-expression expressions)
      (mapcon #'pattern-variables expressions))
     ((list :object-expression members)
@@ -61,7 +68,9 @@
      (,(pattern pattern)
       ,@(loop
           for variable in (pattern-variables pattern)
-          collect `(defvar ,variable ,variable)))
+          for identifier = (%identifier variable)
+          collect `(defparameter ,identifier ,identifier)
+          collect `(push (cons ',variable ,identifier) *bindings*)))
      (_
       (error 'failed :format-control "Pattern match failed"))))
 
@@ -172,11 +181,7 @@
 (defun %identifier (name)
   (or (gethash name *symbol-table*)
       (setf (gethash name *symbol-table*)
-            (let ((symbol (intern name)))
-              (if (or (special-operator-p symbol)
-                      (fboundp symbol))
-                  (gensym name)
-                  symbol)))))
+            (gensym name))))
 
 
 (defpattern assoc* (a b)

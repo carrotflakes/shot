@@ -10,11 +10,7 @@
 
 (defun f (source)
   (print source)
-  (let ((ast (shot.parser:parse source)))
-    (print ast)
-    (let ((code (shot.transpile:statements ast)))
-      (print code)
-      (print (eval code)))))
+  (print (shot:shot source)))
 
 (f "1")
 (f "-123")
@@ -25,7 +21,6 @@
 (f "f x = x + 1")
 (f "[1=true 2=false](1)")
 (f "[x=x<0?:minus|0<x?:plus|:zero](1)")
-(f "[x=x<0?:minus|0<x?:plus|:zero](0)")
-(f "[x=x<0?:minus|0<x?:plus|:zero](-1)")
+(f "f x=x<0?:minus|0<x?:plus|:zero [f(1) f(0) f(-1)]")
 
 (finalize)
